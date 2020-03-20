@@ -1,4 +1,4 @@
-PROG = make_bin_folder plop
+PROG = make_bin_folder camping
 
 all : $(PROG)
 
@@ -12,7 +12,7 @@ TARGET_FOLDER = bin
 make_bin_folder:
 	mkdir -p bin > /dev/null
 
-plop: $(TARGET_FOLDER)/main.o
+camping: $(TARGET_FOLDER)/main.o
 	$(CC) -o $@ $^ $(LDFLAGS)
 
 $(TARGET_FOLDER)/%.o: $(SRC_FOLDER)/%.c
