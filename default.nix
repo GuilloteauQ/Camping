@@ -3,8 +3,8 @@ with import <nixpkgs>{};
 let
   version = "1.0";
 in {
-  mpi_dithering = stdenv.mkDerivation rec {
-    name = "mpi_dithering-${version}";
+  plop = stdenv.mkDerivation rec {
+    name = "plop-${version}";
     src = ./.;
     buildInputs = [
       gcc
@@ -12,8 +12,8 @@ in {
       openmpi
     ];
     installPhase = ''
-      make dithering_bw
-      cp dithering_bw ./bin
+      make
+      cp plop ./bin
       cp -r ./bin $out
     '';
   };

@@ -1,4 +1,4 @@
-PROG = make_bin_folder expe_run
+PROG = make_bin_folder plop
 
 all : $(PROG)
 
@@ -12,7 +12,7 @@ TARGET_FOLDER = bin
 make_bin_folder:
 	mkdir -p bin > /dev/null
 
-expe_run: $(TARGET_FOLDER)/main.o
+plop: $(TARGET_FOLDER)/main.o
 	$(CC) -o $@ $^ $(LDFLAGS)
 
 $(TARGET_FOLDER)/%.o: $(SRC_FOLDER)/%.c
