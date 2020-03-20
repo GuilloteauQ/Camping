@@ -35,7 +35,7 @@ char* receive_string(int source, int* string_lenght) {
     return string;
 }
 
-void start_master(char* filename) {
+void start_master(char* filename, char* epilogue_command) {
     int world_size = get_world_size();
     int ready_status = 0;
     FILE* fp;
@@ -65,8 +65,20 @@ void start_master(char* filename) {
     // Tell the nodes it is over
     int end_status = -1;
     for (int i = 1; i < world_size; i++) {
-        printf("[MASTER] Tell Node %d the campaign is over\n", i);
+        printf("[MASTER] Tell Node %d the campaign is over: Execute epilogue\n",
+               i);
         MPI_Send(&end_status, 1, MPI_INT, i, 99, MPI_COMM_WORLD);
+        send_string(epilogue_command, strlen(epilogue_command), i);
+    }
+}
+
+void master_distribute_prologue(char* command) {
+    int world_size = get_world_size();
+    int ready_status = 0;
+    for (int i = 1; i < world_size; i++) {
+        printf("[MASTER] Sending prologue to Node %d\n", i);
+        MPI_Send(&ready_status, 1, MPI_INT, i, 41, MPI_COMM_WORLD);
+        send_string(command, strlen(command), i);
     }
 }
 
@@ -77,6 +89,14 @@ void slave_execute_command() {
     int status = system(string);
     assert(status != -1);
     free(string);
+}
+
+void slave_execute_prologue() {
+    int status;
+    MPI_Recv(&status, 1, MPI_INT, 0, 41, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+    assert(status == 0);
+    printf("[Node %d] Executing prologue\n", get_my_rank());
+    slave_execute_command();
 }
 
 void tell_the_boss_i_am_free(int my_rank) {
@@ -93,21 +113,28 @@ void start_slave(int my_rank) {
         slave_execute_command();
         start_slave(my_rank);
     } else {
+        printf("[Node %d] Executing Epilogue\n", my_rank);
+        slave_execute_command();
         printf("[Node %d] Ok ! Going back home !\n", my_rank);
     }
 }
 
 int main(int argc, char** argv) {
-    if (argc != 2) {
-        fprintf(stderr, "Usage: %s filename\n", argv[0]);
+    if (argc != 4) {
+        fprintf(stderr, "Usage: %s filename prologue epilogue\n", argv[0]);
         return 1;
     }
     MPI_Init(&argc, &argv);
     int my_rank = get_my_rank();
+    char* filename = argv[1];
+    char* prologue = argv[2];
+    char* epilogue = argv[3];
 
     if (my_rank == 0) {
-        start_master(argv[1]);
+        master_distribute_prologue(prologue);
+        start_master(filename, epilogue);
     } else {
+        slave_execute_prologue();
         start_slave(my_rank);
     }
 
