@@ -64,14 +64,15 @@ void start_master(char* filename, char* epilogue_command) {
         free(line);
 
     // Tell the nodes it is over
-    int end_status = -1;
+    int end_status = (epilogue_command == NULL) ? -2 : -1;
     for (int i = 1; i < world_size; i++) {
         fprintf(stderr,
                 "\033[31m[MASTER]\033[39m Tell Node %d the campaign is over: "
                 "Execute epilogue\n",
                 i);
         MPI_Send(&end_status, 1, MPI_INT, i, 99, MPI_COMM_WORLD);
-        send_string(epilogue_command, strlen(epilogue_command) + 1, i);
+        if (epilogue_command != NULL)
+            send_string(epilogue_command, strlen(epilogue_command) + 1, i);
     }
 }
 
@@ -119,31 +120,60 @@ void start_slave(int my_rank) {
                 (my_rank % 5) + 31, my_rank);
         slave_execute_command();
         start_slave(my_rank);
-    } else {
+    } else if (status == -1) {
         fprintf(stderr, "\033[%dm[Node %d]\033[39m Executing Epilogue\n",
                 (my_rank % 5) + 31, my_rank);
         slave_execute_command();
+        fprintf(stderr, "\033[%dm[Node %d]\033[39m Ok ! Going back home !\n",
+                (my_rank % 5) + 31, my_rank);
+    } else {
         fprintf(stderr, "\033[%dm[Node %d]\033[39m Ok ! Going back home !\n",
                 (my_rank % 5) + 31, my_rank);
     }
 }
 
 int main(int argc, char** argv) {
-    if (argc != 4) {
-        fprintf(stderr, "Usage: %s filename prologue epilogue\n", argv[0]);
-        return 1;
-    }
     MPI_Init(&argc, &argv);
     int my_rank = get_my_rank();
-    char* filename = argv[1];
-    char* prologue = argv[2];
-    char* epilogue = argv[3];
+    int arg_index = 1;
+    char* filename = NULL;
+    char* prologue = NULL;
+    char* epilogue = NULL;
 
+    while (arg_index < argc) {
+        if (strcmp(argv[arg_index], "-f") == 0 ||
+            strcmp(argv[arg_index], "--file") == 0) {
+            assert(arg_index + 1 < argc && argv[arg_index + 1][0] != '-');
+            filename = argv[arg_index + 1];
+            arg_index = arg_index + 2;
+        } else if (strcmp(argv[arg_index], "-p") == 0 ||
+                   strcmp(argv[arg_index], "--prologue") == 0) {
+            assert(arg_index + 1 < argc && argv[arg_index + 1][0] != '-');
+            prologue = argv[arg_index + 1];
+            arg_index = arg_index + 2;
+        } else if (strcmp(argv[arg_index], "-e") == 0 ||
+                   strcmp(argv[arg_index], "--epilogue") == 0) {
+            assert(arg_index + 1 < argc && argv[arg_index + 1][0] != '-');
+            epilogue = argv[arg_index + 1];
+            arg_index = arg_index + 2;
+        } else {
+            fprintf(stderr, "Unkown argument: %s\n", argv[arg_index]);
+            arg_index++;
+        }
+    }
+    if (filename == NULL) {
+        if (my_rank == 0)
+            fprintf(stderr, "Must provide a campaign file ! (-f [file])\n");
+        MPI_Finalize();
+        return EXIT_FAILURE;
+    }
     if (my_rank == 0) {
-        master_distribute_prologue(prologue);
+        if (prologue != NULL)
+            master_distribute_prologue(prologue);
         start_master(filename, epilogue);
     } else {
-        slave_execute_prologue();
+        if (prologue != NULL)
+            slave_execute_prologue();
         start_slave(my_rank);
     }
 
