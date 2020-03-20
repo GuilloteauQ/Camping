@@ -17,8 +17,8 @@ int get_world_size() {
     return size;
 }
 
-void send_string(char* string, int destination) {
-    int string_lenght = strlen(string);
+void send_string(char* string, int string_lenght, int destination) {
+    // int string_lenght = strlen(string);
     // First sending the size of the string
     // to allocate the correct size
     MPI_Send(&string_lenght, 1, MPI_INT, destination, 99, MPI_COMM_WORLD);
@@ -55,7 +55,7 @@ void start_master(char* filename) {
         line[strcspn(line, "\n")] = 0;
         printf("[MASTER] Running on node %d ('%s')\n", free_node, line);
         MPI_Send(&ready_status, 1, MPI_INT, free_node, 99, MPI_COMM_WORLD);
-        send_string(line, free_node);
+        send_string(line, len, free_node);
     }
 
     fclose(fp);
