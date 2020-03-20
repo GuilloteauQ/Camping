@@ -68,7 +68,7 @@ void start_master(char* filename, char* epilogue_command) {
         printf("[MASTER] Tell Node %d the campaign is over: Execute epilogue\n",
                i);
         MPI_Send(&end_status, 1, MPI_INT, i, 99, MPI_COMM_WORLD);
-        send_string(epilogue_command, strlen(epilogue_command), i);
+        send_string(epilogue_command, strlen(epilogue_command) + 1, i);
     }
 }
 
@@ -78,7 +78,7 @@ void master_distribute_prologue(char* command) {
     for (int i = 1; i < world_size; i++) {
         printf("[MASTER] Sending prologue to Node %d\n", i);
         MPI_Send(&ready_status, 1, MPI_INT, i, 41, MPI_COMM_WORLD);
-        send_string(command, strlen(command), i);
+        send_string(command, strlen(command) + 1, i);
     }
 }
 
