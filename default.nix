@@ -4,7 +4,7 @@ let
   version = "1.0";
 in {
   camping = stdenv.mkDerivation rec {
-    name = "CaMPIng-${version}";
+    name = "Camping-${version}";
     pname = "camping";
     src = ./.;
     buildInputs = [
@@ -14,7 +14,7 @@ in {
     ];
     installPhase = ''
       make
-      cp campign ./bin
+      cp camping ./bin
       cp -r ./bin $out
     '';
   };
