@@ -53,8 +53,8 @@ void start_master(char* filename, char* epilogue_command) {
                  MPI_STATUS_IGNORE);
         assert(free_node > 0 && free_node < world_size);
         line[strcspn(line, "\n")] = 0;
-        fprintf(stderr, "[MASTER] Running on node %d ('%s')\n", free_node,
-                line);
+        fprintf(stderr, "\033[31m[MASTER]\033[39m Running on node %d ('%s')\n",
+                free_node, line);
         MPI_Send(&ready_status, 1, MPI_INT, free_node, 99, MPI_COMM_WORLD);
         send_string(line, len, free_node);
     }
@@ -66,10 +66,10 @@ void start_master(char* filename, char* epilogue_command) {
     // Tell the nodes it is over
     int end_status = -1;
     for (int i = 1; i < world_size; i++) {
-        fprintf(
-            stderr,
-            "[MASTER] Tell Node %d the campaign is over: Execute epilogue\n",
-            i);
+        fprintf(stderr,
+                "\033[31m[MASTER]\033[39m Tell Node %d the campaign is over: "
+                "Execute epilogue\n",
+                i);
         MPI_Send(&end_status, 1, MPI_INT, i, 99, MPI_COMM_WORLD);
         send_string(epilogue_command, strlen(epilogue_command) + 1, i);
     }
@@ -79,7 +79,8 @@ void master_distribute_prologue(char* command) {
     int world_size = get_world_size();
     int ready_status = 0;
     for (int i = 1; i < world_size; i++) {
-        fprintf(stderr, "[MASTER] Sending prologue to Node %d\n", i);
+        fprintf(stderr,
+                "\033[31m[MASTER]\033[39m Sending prologue to Node %d\n", i);
         MPI_Send(&ready_status, 1, MPI_INT, i, 41, MPI_COMM_WORLD);
         send_string(command, strlen(command) + 1, i);
     }
@@ -98,12 +99,14 @@ void slave_execute_prologue() {
     int status;
     MPI_Recv(&status, 1, MPI_INT, 0, 41, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
     assert(status == 0);
-    fprintf(stderr, "[Node %d] Executing prologue\n", get_my_rank());
+    fprintf(stderr, "\033[%dm[Node %d]\033[39m Executing prologue\n",
+            (get_my_rank() % 5) + 31, get_my_rank());
     slave_execute_command();
 }
 
 void tell_the_boss_i_am_free(int my_rank) {
-    fprintf(stderr, "[Node %d] Telling boss i am free\n", get_my_rank());
+    fprintf(stderr, "\033[%dm[Node %d]\033[39m Telling boss i am free\n",
+            (my_rank % 5) + 31, my_rank);
     MPI_Send(&my_rank, 1, MPI_INT, 0, 42, MPI_COMM_WORLD);
 }
 
@@ -112,13 +115,16 @@ void start_slave(int my_rank) {
     int status;
     MPI_Recv(&status, 1, MPI_INT, 0, 99, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
     if (status == 0) {
-        fprintf(stderr, "[Node %d] Executing job\n", my_rank);
+        fprintf(stderr, "\033[%dm[Node %d]\033[39m Executing job\n",
+                (my_rank % 5) + 31, my_rank);
         slave_execute_command();
         start_slave(my_rank);
     } else {
-        fprintf(stderr, "[Node %d] Executing Epilogue\n", my_rank);
+        fprintf(stderr, "\033[%dm[Node %d]\033[39m Executing Epilogue\n",
+                (my_rank % 5) + 31, my_rank);
         slave_execute_command();
-        fprintf(stderr, "[Node %d] Ok ! Going back home !\n", my_rank);
+        fprintf(stderr, "\033[%dm[Node %d]\033[39m Ok ! Going back home !\n",
+                (my_rank % 5) + 31, my_rank);
     }
 }
 
