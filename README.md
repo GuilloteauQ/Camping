@@ -1,6 +1,6 @@
 # Camping
 
-``Camping`` is a MPI application that allows you to distribute the execution of large sets of parametric independant tasks (also called bag-of-tasks). 
+``Camping`` is a MPI application that allows you to distribute the execution of large sets of parametric independent tasks (also called bag-of-tasks). 
 
 # Usage
 
@@ -14,7 +14,7 @@ $ ./application param1 param2 param3
 0.043
 ```
 
-And you need to do thousands of **independant** measurements with different parameters (i.e. a campaign).
+And you need to do thousands of **independent** measurements with different parameters (i.e. a campaign).
 
 ```Camping`` will distribute all the measurements on differents machines for you to accelerate the campaign.
 
