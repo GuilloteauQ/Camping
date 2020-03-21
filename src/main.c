@@ -18,7 +18,6 @@ int get_world_size() {
 }
 
 void send_string(char* string, int string_lenght, int destination) {
-    // int string_lenght = strlen(string);
     // First sending the size of the string
     // to allocate the correct size
     MPI_Send(&string_lenght, 1, MPI_INT, destination, 99, MPI_COMM_WORLD);
@@ -63,7 +62,7 @@ void start_master(char* filename, char* epilogue_command) {
     if (line)
         free(line);
 
-    // Tell the nodes it is over
+    // Tell the nodes it is over and execute the epilogue if needed
     int end_status = (epilogue_command == NULL) ? -2 : -1;
     for (int i = 1; i < world_size; i++) {
         fprintf(stderr,
@@ -96,12 +95,12 @@ void slave_execute_command() {
     free(string);
 }
 
-void slave_execute_prologue() {
+void slave_execute_prologue(int my_rank) {
     int status;
     MPI_Recv(&status, 1, MPI_INT, 0, 41, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
     assert(status == 0);
     fprintf(stderr, "\033[%dm[Node %d]\033[39m Executing prologue\n",
-            (get_my_rank() % 5) + 31, get_my_rank());
+            (my_rank % 5) + 31, my_rank);
     slave_execute_command();
 }
 
@@ -120,13 +119,12 @@ void start_slave(int my_rank) {
                 (my_rank % 5) + 31, my_rank);
         slave_execute_command();
         start_slave(my_rank);
-    } else if (status == -1) {
-        fprintf(stderr, "\033[%dm[Node %d]\033[39m Executing Epilogue\n",
-                (my_rank % 5) + 31, my_rank);
-        slave_execute_command();
-        fprintf(stderr, "\033[%dm[Node %d]\033[39m Ok ! Going back home !\n",
-                (my_rank % 5) + 31, my_rank);
     } else {
+        if (status == -1) {
+            fprintf(stderr, "\033[%dm[Node %d]\033[39m Executing Epilogue\n",
+                    (my_rank % 5) + 31, my_rank);
+            slave_execute_command();
+        }
         fprintf(stderr, "\033[%dm[Node %d]\033[39m Ok ! Going back home !\n",
                 (my_rank % 5) + 31, my_rank);
     }
@@ -173,7 +171,7 @@ int main(int argc, char** argv) {
         start_master(filename, epilogue);
     } else {
         if (prologue != NULL)
-            slave_execute_prologue();
+            slave_execute_prologue(my_rank);
         start_slave(my_rank);
     }
 
