@@ -139,30 +139,16 @@ void start_slave(int my_rank) {
 }
 
 int main(int argc, char** argv) {
-    MPI_Init(&argc, &argv);
-    int my_rank = get_my_rank();
-    int arg_index = 1;
-    char* filename = NULL;
-    char* prologue = NULL;
-    char* epilogue = NULL;
-
-    while (arg_index < argc) {
-        if (strcmp(argv[arg_index], "-f") == 0 ||
-            strcmp(argv[arg_index], "--file") == 0) {
-            assert(arg_index + 1 < argc && argv[arg_index + 1][0] != '-');
-            filename = argv[arg_index + 1];
-            arg_index = arg_index + 2;
-        } else {
-            fprintf(stderr, "Unkown argument: %s\n", argv[arg_index]);
-            arg_index++;
-        }
-    }
-    if (filename == NULL) {
-        if (my_rank == 0)
-            fprintf(stderr, "Must provide a campaign file ! (-f [file])\n");
-        MPI_Finalize();
+    if (argc != 2) {
+        fprintf(stderr, "Bad usage: mpirun [MPI Flags] %s [JSON FILE]\n",
+                argv[0]);
         return EXIT_FAILURE;
     }
+    MPI_Init(&argc, &argv);
+    int my_rank = get_my_rank();
+    char* filename = argv[1];
+    char* prologue = NULL;
+    char* epilogue = NULL;
 
     struct json_data* data = extract_file(filename);
 
