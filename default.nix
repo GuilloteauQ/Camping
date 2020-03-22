@@ -7,6 +7,7 @@ in {
     name = "Camping-${version}";
     pname = "camping";
     src = ./.;
+    nativeBuildInputs = [ makeWrapper ];
     buildInputs = [
       gcc
       coreutils
@@ -16,6 +17,7 @@ in {
       make
       cp camping ./bin
       cp -r ./bin $out
+      makeWrapper $out/bin/camping $wapperfile --prefix PATH : ${lib.makeBinPath [ openmpi ]}
     '';
   };
 }
