@@ -12,7 +12,7 @@ TARGET_FOLDER = bin
 make_bin_folder:
 	mkdir -p bin > /dev/null
 
-camping: $(TARGET_FOLDER)/main.o
+camping: $(TARGET_FOLDER)/main.o $(TARGET_FOLDER)/json_extraction.o
 	$(CC) -o $@ $^ $(LDFLAGS)
 
 $(TARGET_FOLDER)/%.o: $(SRC_FOLDER)/%.c

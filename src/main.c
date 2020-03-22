@@ -4,6 +4,9 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include "json_extraction.h"
+
+#define MAX_PARAM_SIZE 100
 
 int get_my_rank() {
     int rank;
@@ -34,33 +37,38 @@ char* receive_string(int source, int* string_lenght) {
     return string;
 }
 
-void start_master(char* filename, char* epilogue_command) {
+void start_master(struct json_data* data, char* path, char* epilogue_command) {
     int world_size = get_world_size();
     int ready_status = 0;
-    FILE* fp;
-    char* line = NULL;
-    size_t len = 0;
-    ssize_t read;
     int free_node;
 
-    fp = fopen(filename, "r");
-    if (fp == NULL)
-        exit(EXIT_FAILURE);
+    int start_index = extract_attribute(data, "params");
 
-    while ((read = getline(&line, &len, fp)) != -1) {
+    jsmntok_t param_token = data->t[start_index];
+
+    int str_len_base = strlen(path);
+
+    char* command = malloc(sizeof(char) * (str_len_base + MAX_PARAM_SIZE + 1));
+    strncpy(command, path, str_len_base);
+    command[str_len_base] = ' ';
+    for (int task_number = 0; task_number < param_token.size; task_number++) {
+        jsmntok_t task_token = data->t[start_index + 1 + task_number];
+        int str_len_param = task_token.end - task_token.start;
+        extract_string(data, start_index + 1 + task_number, str_len_param,
+                       command + str_len_base + 1);
+
         MPI_Recv(&free_node, 1, MPI_INT, MPI_ANY_SOURCE, 42, MPI_COMM_WORLD,
                  MPI_STATUS_IGNORE);
         assert(free_node > 0 && free_node < world_size);
-        line[strcspn(line, "\n")] = 0;
-        fprintf(stderr, "\033[31m[MASTER]\033[39m Running on node %d ('%s')\n",
-                free_node, line);
+        fprintf(stderr,
+                "\033[31m[MASTER]\033[39m Running task %d/%d (%d %%) on node "
+                "%d ('%s')\n",
+                task_number + 1, param_token.size,
+                (task_number + 1) * 100 / param_token.size, free_node, command);
         MPI_Send(&ready_status, 1, MPI_INT, free_node, 99, MPI_COMM_WORLD);
-        send_string(line, len, free_node);
+        send_string(command, str_len_base + str_len_param + 1, free_node);
     }
-
-    fclose(fp);
-    if (line)
-        free(line);
+    free(command);
 
     // Tell the nodes it is over and execute the epilogue if needed
     int end_status = (epilogue_command == NULL) ? -2 : -1;
@@ -144,16 +152,6 @@ int main(int argc, char** argv) {
             assert(arg_index + 1 < argc && argv[arg_index + 1][0] != '-');
             filename = argv[arg_index + 1];
             arg_index = arg_index + 2;
-        } else if (strcmp(argv[arg_index], "-p") == 0 ||
-                   strcmp(argv[arg_index], "--prologue") == 0) {
-            assert(arg_index + 1 < argc && argv[arg_index + 1][0] != '-');
-            prologue = argv[arg_index + 1];
-            arg_index = arg_index + 2;
-        } else if (strcmp(argv[arg_index], "-e") == 0 ||
-                   strcmp(argv[arg_index], "--epilogue") == 0) {
-            assert(arg_index + 1 < argc && argv[arg_index + 1][0] != '-');
-            epilogue = argv[arg_index + 1];
-            arg_index = arg_index + 2;
         } else {
             fprintf(stderr, "Unkown argument: %s\n", argv[arg_index]);
             arg_index++;
@@ -165,16 +163,24 @@ int main(int argc, char** argv) {
         MPI_Finalize();
         return EXIT_FAILURE;
     }
+
+    struct json_data* data = extract_file(filename);
+
+    char* path = extract_exec_file(data);
+    prologue = extract_prologue(data);
+    epilogue = extract_epilogue(data);
+
     if (my_rank == 0) {
         if (prologue != NULL)
             master_distribute_prologue(prologue);
-        start_master(filename, epilogue);
+        start_master(data, path, epilogue);
     } else {
         if (prologue != NULL)
             slave_execute_prologue(my_rank);
         start_slave(my_rank);
     }
 
+    free_json_data(data);
     MPI_Finalize();
     return 0;
 }
