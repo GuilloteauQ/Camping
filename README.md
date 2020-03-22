@@ -16,40 +16,52 @@ $ ./application param1 param2 param3
 
 And you need to do thousands of **independent** measurements with different parameters (i.e. a campaign).
 
-```Camping`` will distribute all the measurements on differents machines for you to accelerate the campaign.
+``Camping`` will distribute all the measurements on differents machines for you to accelerate the campaign.
 
 ## Campaign file
 
 You can gather all the commands that you intent to run in a file for ``Camping`` to distribute them:
 
-```bash
-# Content of my_campaign.txt
-./application param1 param2 param3
-./application param4 param5 param6
-./application param7 param8 param9
-# ...
+```json
+{
+  "exec_file": "sh example/sleep.sh",
+  "prologue": [
+    "mkdir -p /tmp/workdir",
+    "cd /tmp/workdir",
+    "touch prologue_works"
+  ],
+  "epilogue": [
+    "cd /tmp/workdir",
+    "touch epilogue_works"
+  ],
+  "params": [
+    "1",
+    "2",
+    "3",
+    "4",
+    "5",
+    "6",
+    "7",
+    "8",
+    "9",
+    "10"
+  ]
+}
 ```
 
-You have to give a campaign file to ``Camping``.
+* ``exec_file``: Path for the executable (Mandatory)
 
-You can give it by using the flags ``-f`` or ``--file`` followed to the path of the campaign file.
+* ``prologue``: Code executed by all the nodes before the start of the campaign (Optional)
 
-## Prologue and Epilogue
+* ``epilogue``: Code executed by all the nodes after the end of the campaign (Optional)
 
-In certain situation you might want to have each node execute a piece of code before and/or after the beginning/end of the campaign.
+* ``params``: List of string representing the parameters to plug into the executable (Mandatory)
 
-These pieces of code are called:
-
-* prologue: code executed by each node before start of the campaign
-
-* epilogue: code executed by each node after the end of the campaign
-
-You can give a prologue (resp. epilogue) to ``Camping`` by using the flags ``-p`` or ``--prologue`` (resp. ``-e`` or ``--epilogue``) followed by the code to execute.
 
 ## Full command
 
 ```bash
-mpirun -np NB_PROCESSES -H HOSTFILE camping -f my_campaign.txt -p 'hostname' -e 'echo "Goodbye !"'
+mpirun -np NB_PROCESSES -H HOSTFILE camping my_campaign.json
 ```
 
 # Installation
