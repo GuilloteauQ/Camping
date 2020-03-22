@@ -91,6 +91,8 @@ char* extract_exec_file(struct json_data* data) {
 
 char* extract_prologue_epilogue(struct json_data* data, char* to_extract) {
     int prologue_index = extract_attribute(data, to_extract);
+    if (prologue_index == -1)
+        return NULL;
     jsmntok_t tok = data->t[prologue_index];
     int size = tok.size;
     int len = 0;
